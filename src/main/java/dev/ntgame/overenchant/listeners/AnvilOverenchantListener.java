@@ -2,29 +2,24 @@ package dev.ntgame.overenchant.listeners;
 
 import dev.ntgame.overenchant.OverEnchantPlugin;
 import dev.ntgame.overenchant.config.OverEnchantConfig;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.TextDecoration;
+import dev.ntgame.overenchant.util.XOverEnchantVersion;
+import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
+import org.bukkit.inventory.AnvilInventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.Repairable;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Vanilla's own anvil combine rule already turns "same enchant, same level" into
- * level+1 (V + V = VI) - it just refuses to go past {@link Enchantment#getMaxLevel()}.
- * This only steps in for the specific case where that vanilla cap is what's blocking
- * the merge, and replaces the (otherwise empty/vanilla) result with one that carries
- * the enchantment up to this plugin's configured cap instead.
- */
 public class AnvilOverenchantListener implements Listener {
 
     private final OverEnchantPlugin plugin;
@@ -36,27 +31,35 @@ public class AnvilOverenchantListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onPrepareAnvil(PrepareAnvilEvent event) {
         OverEnchantConfig config = plugin.getOverEnchantConfig();
-        ItemStack base = event.getInventory().getFirstItem();
-        ItemStack addition = event.getInventory().getSecondItem();
+        AnvilInventory inv = event.getInventory();
+
+        ItemStack base = inv.getItem(0);
+        ItemStack addition = inv.getItem(1);
         if (base == null || addition == null) return;
         if (addition.getType() != base.getType() && !isEnchantedBook(addition)) return;
 
         Map<Enchantment, Integer> baseEnch = enchantsOf(base);
         Map<Enchantment, Integer> addEnch = enchantsOf(addition);
 
-        boolean baseHasOverlevels = baseEnch.entrySet().stream()
-                .anyMatch(e -> e.getValue() > e.getKey().getMaxLevel());
+        boolean baseHasOverlevels = false;
+        for (Map.Entry<Enchantment, Integer> entry : baseEnch.entrySet()) {
+            if (entry.getValue() > entry.getKey().getMaxLevel()) {
+                baseHasOverlevels = true;
+                break;
+            }
+        }
 
         if (addEnch.isEmpty() && !baseHasOverlevels) return;
 
-        Map<Enchantment, Integer> merged = new LinkedHashMap<>(baseEnch);
+        Map<Enchantment, Integer> merged = new LinkedHashMap<Enchantment, Integer>(baseEnch);
         boolean anyOverVanillaCap = baseHasOverlevels;
         int overlevels = 0;
 
         for (Map.Entry<Enchantment, Integer> entry : addEnch.entrySet()) {
             Enchantment ench = entry.getKey();
             int addLevel = entry.getValue();
-            int baseLevel = baseEnch.getOrDefault(ench, 0);
+            Integer existingBase = baseEnch.get(ench);
+            int baseLevel = existingBase != null ? existingBase.intValue() : 0;
 
             // If applying to an item (not a book), respect target item applicability
             if (!isEnchantedBook(base) && baseLevel <= 0 && !ench.canEnchantItem(base)) {
@@ -65,8 +68,13 @@ public class AnvilOverenchantListener implements Listener {
 
             // If applying to an item (not a book), respect incompatibility conflicts
             if (!isEnchantedBook(base)) {
-                boolean conflicts = merged.keySet().stream()
-                        .anyMatch(existing -> !existing.equals(ench) && existing.conflictsWith(ench));
+                boolean conflicts = false;
+                for (Enchantment existing : merged.keySet()) {
+                    if (!existing.equals(ench) && existing.conflictsWith(ench)) {
+                        conflicts = true;
+                        break;
+                    }
+                }
                 if (conflicts) continue;
             }
 
@@ -91,57 +99,71 @@ public class AnvilOverenchantListener implements Listener {
         applyEnchants(meta, merged);
         applyRename(event, meta);
 
-        if (meta instanceof Repairable repairable) repairable.setRepairCost(0);
+        if (meta instanceof Repairable) {
+            ((Repairable) meta).setRepairCost(0);
+        }
         result.setItemMeta(meta);
 
         repairDurability(base, addition, result);
 
         int cost = Math.max(1, overlevels * config.xpCostPerOverlevel());
-        event.getView().setRepairCost(cost);
-        if (event.getView().getMaximumRepairCost() < cost) {
-            event.getView().setMaximumRepairCost(cost);
-        }
+        XOverEnchantVersion.setRepairCost(event.getView(), inv, cost);
 
         event.setResult(result);
     }
 
     private boolean isEnchantedBook(ItemStack item) {
         if (item == null) return false;
-        return item.getType() == org.bukkit.Material.ENCHANTED_BOOK
-                || item.getItemMeta() instanceof EnchantmentStorageMeta;
+        Material m = item.getType();
+        return m == Material.BOOK || m.name().equals("ENCHANTED_BOOK") || (item.hasItemMeta() && item.getItemMeta() instanceof EnchantmentStorageMeta);
     }
 
     private Map<Enchantment, Integer> enchantsOf(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return Collections.emptyMap();
         ItemMeta meta = item.getItemMeta();
-        if (meta instanceof EnchantmentStorageMeta storageMeta) {
-            return new LinkedHashMap<>(storageMeta.getStoredEnchants());
+        if (meta instanceof EnchantmentStorageMeta) {
+            return new LinkedHashMap<Enchantment, Integer>(((EnchantmentStorageMeta) meta).getStoredEnchants());
         }
-        if (meta != null) {
-            return new LinkedHashMap<>(meta.getEnchants());
-        }
-        return Map.of();
+        return new LinkedHashMap<Enchantment, Integer>(meta.getEnchants());
     }
 
     private void applyEnchants(ItemMeta meta, Map<Enchantment, Integer> merged) {
-        if (meta instanceof EnchantmentStorageMeta storageMeta) {
-            for (Enchantment e : new ArrayList<>(storageMeta.getStoredEnchants().keySet())) {
+        if (meta instanceof EnchantmentStorageMeta) {
+            EnchantmentStorageMeta storageMeta = (EnchantmentStorageMeta) meta;
+            for (Enchantment e : new ArrayList<Enchantment>(storageMeta.getStoredEnchants().keySet())) {
                 storageMeta.removeStoredEnchant(e);
             }
-            merged.forEach((e, level) -> {
-                if (level > 0) storageMeta.addStoredEnchant(e, level, true);
-            });
+            for (Map.Entry<Enchantment, Integer> entry : merged.entrySet()) {
+                if (entry.getValue() > 0) {
+                    storageMeta.addStoredEnchant(entry.getKey(), entry.getValue(), true);
+                }
+            }
         } else {
-            meta.removeEnchantments();
-            merged.forEach((e, level) -> {
-                if (level > 0) meta.addEnchant(e, level, true);
-            });
+            for (Enchantment e : new ArrayList<Enchantment>(meta.getEnchants().keySet())) {
+                meta.removeEnchant(e);
+            }
+            for (Map.Entry<Enchantment, Integer> entry : merged.entrySet()) {
+                if (entry.getValue() > 0) {
+                    meta.addEnchant(entry.getKey(), entry.getValue(), true);
+                }
+            }
         }
     }
 
     private void applyRename(PrepareAnvilEvent event, ItemMeta meta) {
-        String rename = event.getView().getRenameText();
-        if (rename != null && !rename.isBlank()) {
-            meta.displayName(Component.text(rename).decoration(TextDecoration.ITALIC, false));
+        String rename = null;
+        try {
+            Method m = event.getView().getClass().getMethod("getRenameText");
+            rename = (String) m.invoke(event.getView());
+        } catch (Throwable ignored) {
+            try {
+                Method m = event.getInventory().getClass().getMethod("getRenameText");
+                rename = (String) m.invoke(event.getInventory());
+            } catch (Throwable ignored2) {}
+        }
+
+        if (rename != null && !rename.trim().isEmpty()) {
+            meta.setDisplayName(rename);
         }
     }
 
@@ -151,14 +173,13 @@ public class AnvilOverenchantListener implements Listener {
         short maxDurability = base.getType().getMaxDurability();
         if (maxDurability <= 0) return;
 
-        ItemMeta resultMeta = result.getItemMeta();
-        ItemMeta additionMeta = addition.getItemMeta();
-        if (!(resultMeta instanceof Damageable resultDmg) || !(additionMeta instanceof Damageable additionDmg)) return;
+        int baseDmg = XOverEnchantVersion.getItemDamage(base);
+        int additionDmg = XOverEnchantVersion.getItemDamage(addition);
 
-        int repairAmount = (maxDurability - resultDmg.getDamage())
-                + (maxDurability - additionDmg.getDamage())
+        int repairAmount = (maxDurability - baseDmg)
+                + (maxDurability - additionDmg)
                 + (int) (maxDurability * 0.12);
-        resultDmg.setDamage(Math.max(0, maxDurability - repairAmount));
-        result.setItemMeta(resultMeta);
+        int newDmg = Math.max(0, maxDurability - repairAmount);
+        XOverEnchantVersion.setItemDamage(result, newDmg);
     }
 }

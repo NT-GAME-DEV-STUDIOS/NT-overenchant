@@ -4,6 +4,8 @@ import dev.ntgame.overenchant.OverEnchantPlugin;
 import dev.ntgame.overenchant.config.EnchantRule;
 import dev.ntgame.overenchant.config.MaxEffect;
 import dev.ntgame.overenchant.config.OverEnchantConfig;
+import dev.ntgame.overenchant.util.XOverEnchantVersion;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -28,14 +30,15 @@ public class InstamineListener implements Listener {
         OverEnchantConfig config = plugin.getOverEnchantConfig();
 
         Player player = event.getPlayer();
-        if (!player.hasPermission("overenchant.use")) return;
-        if (event.getBlock().getType().getHardness() < 0) return; // unbreakable, e.g. bedrock
+        if (player == null || !player.hasPermission("overenchant.use")) return;
+        if (XOverEnchantVersion.isBedrockOrUnbreakable(event.getBlock())) return;
 
         ItemStack tool = event.getItemInHand();
+        if (tool == null || !tool.hasItemMeta()) return;
         ItemMeta meta = tool.getItemMeta();
         if (meta == null || !meta.hasEnchants()) return;
 
-        for (Map.Entry<org.bukkit.enchantments.Enchantment, Integer> entry : meta.getEnchants().entrySet()) {
+        for (Map.Entry<Enchantment, Integer> entry : meta.getEnchants().entrySet()) {
             EnchantRule rule = config.ruleFor(entry.getKey());
             if (rule != null && rule.effect() == MaxEffect.INSTAMINE && entry.getValue() >= rule.cap()) {
                 event.setInstaBreak(true);

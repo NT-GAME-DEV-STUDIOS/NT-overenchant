@@ -10,6 +10,10 @@
 # "max-effect: instamine" (currently only used on efficiency) makes a tool break
 # any block instantly, regardless of hardness, once it reaches its cap.
 
+# Language setting: "en" for English, "de" for German
+# Can also be changed in-game with /overenchant lang <de|en>
+language: "en"
+
 anvil:
   # Extra XP levels charged per level gained ABOVE the enchantment's normal vanilla
   # max level. Levels within the vanilla range still use normal vanilla anvil cost.

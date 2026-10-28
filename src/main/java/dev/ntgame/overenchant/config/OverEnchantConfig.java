@@ -7,6 +7,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
 
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /** Loads config.yml: per-enchantment anvil caps plus the anvil XP-cost setting. */
@@ -14,11 +15,19 @@ public class OverEnchantConfig {
 
     private final Map<Enchantment, EnchantRule> rules = new LinkedHashMap<Enchantment, EnchantRule>();
     private int xpCostPerOverlevel = 3;
+    private String language = "en";
+    private OverEnchantPlugin plugin;
 
     public static OverEnchantConfig load(OverEnchantPlugin plugin) {
         OverEnchantConfig config = new OverEnchantConfig();
+        config.plugin = plugin;
         plugin.reloadConfig();
         FileConfiguration root = plugin.getConfig();
+
+        config.language = root.getString("language", "en").toLowerCase(Locale.ROOT);
+        if (!"de".equals(config.language) && !"en".equals(config.language)) {
+            config.language = "en";
+        }
 
         config.xpCostPerOverlevel = Math.max(0, root.getInt("anvil.xp-cost-per-overlevel", 3));
 
@@ -41,7 +50,7 @@ public class OverEnchantConfig {
             MaxEffect effect = MaxEffect.NONE;
             String effectName = entry.getString("max-effect", "none");
             try {
-                effect = MaxEffect.valueOf(effectName.trim().toUpperCase());
+                effect = MaxEffect.valueOf(effectName.trim().toUpperCase(Locale.ROOT));
             } catch (IllegalArgumentException ex) {
                 plugin.getLogger().warning("Unknown max-effect '" + effectName + "' for enchantment '" + key + "' - defaulting to none.");
             }
@@ -49,6 +58,23 @@ public class OverEnchantConfig {
             config.rules.put(enchantment, new EnchantRule(enchantment, cap, effect));
         }
         return config;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String lang) {
+        String clean = (lang != null && lang.equalsIgnoreCase("de")) ? "de" : "en";
+        this.language = clean;
+        if (plugin != null) {
+            plugin.getConfig().set("language", clean);
+            plugin.saveConfig();
+        }
+    }
+
+    public boolean isDe() {
+        return "de".equalsIgnoreCase(language);
     }
 
     public EnchantRule ruleFor(Enchantment enchantment) {

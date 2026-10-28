@@ -1,38 +1,84 @@
 # OverEnchant
 
-Paper plugin (Minecraft 1.26.2) that lets an anvil push enchantments past their
-vanilla max level.
+[![Language: English](https://img.shields.io/badge/Language-English-blue.svg)](#)
+[![Deutsch](https://img.shields.io/badge/Sprache-Deutsch-orange.svg)](README_DE.md)
+[![Platform: Paper / Purpur / Spigot](https://img.shields.io/badge/Platform-Paper%20%7C%20Purpur%20%7C%20Spigot-green.svg)](#)
+[![Minecraft: 1.8.8 - 1.21.4+](https://img.shields.io/badge/Minecraft-1.8.8--1.21.4%2B-brightgreen.svg)](#)
+[![Java: 8+](https://img.shields.io/badge/Java-8%2B-red.svg)](#)
 
-Vanilla already turns "same enchant, same level" into level+1 on an anvil
-(V + V = VI) - it just refuses to go past the enchantment's own max level. This
-plugin removes that ceiling, per enchantment, up to a configurable cap:
+[🇩🇪 Zur deutschen Version wechseln](README_DE.md) | [🇬🇧 English Version](README.md)
 
+---
+
+Universal, lightweight enchantment expansion plugin for Minecraft **1.8.8 to 1.21.4+** (Paper, Purpur, Spigot).
+
+Allows anvils to combine enchantments beyond their standard vanilla maximum levels using the familiar vanilla anvil mechanics (e.g. Sharpness V + V = VI).
+
+---
+
+## How It Works
+
+Vanilla Minecraft naturally increases enchantment levels by one when combining two identical levels (e.g., Protection IV + IV = Protection V on an anvil). However, vanilla refuses to proceed past the enchantment's default cap.
+
+**OverEnchant removes that ceiling cleanly**:
 ```
-Efficiency V + V  -> VI
-VI + VI           -> VII
+Efficiency V + V     -> Efficiency VI
+Efficiency VI + VI   -> Efficiency VII
 ...
-XIV + XIV         -> XV  (configurable max-effect: instant mine on any block)
+Efficiency XIV + XIV -> Efficiency XV (Configurable max-effect: Instant mine on any block!)
 ```
 
-## Config
+### Key Principles
+- **No free shortcuts**: Higher tiers can only be obtained through legitimate anvil merging of two identical-level items/books.
+- **Configurable Caps**: Every enchantment has its own configurable maximum cap in `config.yml`.
+- **Balanced XP Cost**: A configurable XP penalty (`anvil.xp-cost-per-overlevel`) is applied for levels surpassing vanilla limits.
+- **Special Effects**: Optional cap effects like `instamine` on Efficiency XV.
 
-See [`src/main/resources/config.yml`](src/main/resources/config.yml). Every
-entry under `enchantments:` sets a `cap` (highest level obtainable via anvil)
-and an optional `max-effect` (currently only `instamine`, used on Efficiency).
-Levels above vanilla's own max cost extra XP, configurable via
-`anvil.xp-cost-per-overlevel`.
+---
 
-If overenchanted merges show "Too Expensive!" for survival players, raise
-`settings.anvil-max-repair-cost` in `spigot.yml` (or set it to `-1`).
+## Commands & Permissions
 
-## Commands
+| Command | Description | Permission |
+| :--- | :--- | :--- |
+| `/overenchant info` | Displays plugin information and available features | *None* |
+| `/overenchant reload` | Reloads `config.yml` | `overenchant.admin` |
+| `/overenchant lang <de\|en>` | Changes plugin language live (English / German) | `overenchant.admin` |
 
-- `/overenchant reload` (`overenchant.admin`, default op) - reloads `config.yml`.
+---
 
-## Build
+## Configuration (`config.yml`)
 
+```yaml
+# Language setting: "en" for English, "de" for German
+# Can also be changed in-game with /overenchant lang <de|en>
+language: "en"
+
+anvil:
+  # Extra XP levels charged per level gained ABOVE the enchantment's normal vanilla max level.
+  xp-cost-per-overlevel: 3
+
+enchantments:
+  # Tools & Weapons
+  efficiency:
+    cap: 15
+    max-effect: instamine
+  sharpness:
+    cap: 10
+  unbreaking:
+    cap: 10
+  fortune:
+    cap: 10
+  looting:
+    cap: 10
+  # ... supports all vanilla & modern enchantments up to 1.21.4+ (Density, Breach, Wind Burst)
 ```
-./gradlew jar
-```
 
-Produces `build/libs/OverEnchant-1.0.<n>.jar` (auto-incrementing build number).
+> **Survival Note**: If anvil merges show "Too Expensive!" for survival players, raise `settings.anvil-max-repair-cost` in your server's `spigot.yml` (or set it to `-1` to disable repair cost limits).
+
+---
+
+## Compatibility
+
+- **Minecraft**: 1.8.8, 1.12.2, 1.16.5, 1.17, 1.18, 1.19, 1.20, 1.21.x+
+- **Server Software**: Paper, Purpur, Spigot
+- **Java**: 8 to 25+ (compiled to Java 8 bytecode for maximum compatibility)

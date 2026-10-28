@@ -43,10 +43,14 @@ public class AnvilOverenchantListener implements Listener {
 
         Map<Enchantment, Integer> baseEnch = enchantsOf(base);
         Map<Enchantment, Integer> addEnch = enchantsOf(addition);
-        if (addEnch.isEmpty()) return;
+
+        boolean baseHasOverlevels = baseEnch.entrySet().stream()
+                .anyMatch(e -> e.getValue() > e.getKey().getMaxLevel());
+
+        if (addEnch.isEmpty() && !baseHasOverlevels) return;
 
         Map<Enchantment, Integer> merged = new LinkedHashMap<>(baseEnch);
-        boolean anyOverVanillaCap = false;
+        boolean anyOverVanillaCap = baseHasOverlevels;
         int overlevels = 0;
 
         for (Map.Entry<Enchantment, Integer> entry : addEnch.entrySet()) {
@@ -54,9 +58,17 @@ public class AnvilOverenchantListener implements Listener {
             int addLevel = entry.getValue();
             int baseLevel = baseEnch.getOrDefault(ench, 0);
 
-            boolean conflicts = merged.keySet().stream()
-                    .anyMatch(existing -> !existing.equals(ench) && existing.conflictsWith(ench));
-            if (conflicts) continue;
+            // If applying to an item (not a book), respect target item applicability
+            if (!isEnchantedBook(base) && baseLevel <= 0 && !ench.canEnchantItem(base)) {
+                continue;
+            }
+
+            // If applying to an item (not a book), respect incompatibility conflicts
+            if (!isEnchantedBook(base)) {
+                boolean conflicts = merged.keySet().stream()
+                        .anyMatch(existing -> !existing.equals(ench) && existing.conflictsWith(ench));
+                if (conflicts) continue;
+            }
 
             int computed = (baseLevel > 0 && addLevel > 0)
                     ? (baseLevel == addLevel ? baseLevel + 1 : Math.max(baseLevel, addLevel))
@@ -70,7 +82,7 @@ public class AnvilOverenchantListener implements Listener {
             merged.put(ench, computed);
         }
 
-        // Within vanilla's own cap, vanilla already produces the right result - leave it alone.
+        // Within vanilla's own cap and without existing overlevels, vanilla produces the right result.
         if (!anyOverVanillaCap) return;
 
         ItemStack result = base.clone();
@@ -94,7 +106,9 @@ public class AnvilOverenchantListener implements Listener {
     }
 
     private boolean isEnchantedBook(ItemStack item) {
-        return item.getItemMeta() instanceof EnchantmentStorageMeta;
+        if (item == null) return false;
+        return item.getType() == org.bukkit.Material.ENCHANTED_BOOK
+                || item.getItemMeta() instanceof EnchantmentStorageMeta;
     }
 
     private Map<Enchantment, Integer> enchantsOf(ItemStack item) {

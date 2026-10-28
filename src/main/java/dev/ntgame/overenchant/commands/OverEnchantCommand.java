@@ -7,7 +7,11 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 
-public class OverEnchantCommand implements CommandExecutor {
+import org.bukkit.command.TabCompleter;
+
+import java.util.List;
+
+public class OverEnchantCommand implements CommandExecutor, TabCompleter {
 
     private final OverEnchantPlugin plugin;
 
@@ -24,5 +28,15 @@ public class OverEnchantCommand implements CommandExecutor {
         }
         sender.sendMessage(Component.text("Usage: /overenchant reload", NamedTextColor.RED));
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length == 1) {
+            if ("reload".startsWith(args[0].toLowerCase())) {
+                return List.of("reload");
+            }
+        }
+        return List.of();
     }
 }

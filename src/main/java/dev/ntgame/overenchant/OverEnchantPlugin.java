@@ -19,7 +19,11 @@ public class OverEnchantPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new InstamineListener(this), this);
 
         var command = getCommand("overenchant");
-        if (command != null) command.setExecutor(new OverEnchantCommand(this));
+        if (command != null) {
+            OverEnchantCommand cmd = new OverEnchantCommand(this);
+            command.setExecutor(cmd);
+            command.setTabCompleter(cmd);
+        }
     }
 
     public void reloadOverEnchantConfig() {

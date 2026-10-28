@@ -18,6 +18,7 @@ anvil:
   xp-cost-per-overlevel: 3
 
 enchantments:
+  # Tools & Weapons
   efficiency:
     cap: 15
     max-effect: instamine
@@ -27,8 +28,56 @@ enchantments:
     cap: 10
   bane_of_arthropods:
     cap: 10
+  knockback:
+    cap: 10
+  fire_aspect:
+    cap: 10
+  looting:
+    cap: 10
+  sweeping_edge:
+    cap: 8
+  unbreaking:
+    cap: 10
+  fortune:
+    cap: 10
+
+  # Mace (Minecraft 1.21+)
+  density:
+    cap: 10
+  breach:
+    cap: 10
+  wind_burst:
+    cap: 6
+
+  # Bow & Crossbow
   power:
     cap: 10
+  punch:
+    cap: 10
+  flame:
+    cap: 1
+  infinity:
+    cap: 1
+  piercing:
+    cap: 10
+  quick_charge:
+    cap: 5
+  multishot:
+    cap: 1
+
+  # Trident & Spear
+  loyalty:
+    cap: 8
+  impaling:
+    cap: 10
+  riptide:
+    cap: 6
+  channeling:
+    cap: 1
+  lunge:
+    cap: 6
+
+  # Armor
   protection:
     cap: 10
   projectile_protection:
@@ -39,37 +88,33 @@ enchantments:
     cap: 10
   feather_falling:
     cap: 10
-  unbreaking:
-    cap: 10
-  fortune:
-    cap: 10
-  looting:
-    cap: 10
-  knockback:
-    cap: 10
-  punch:
-    cap: 10
   respiration:
     cap: 10
+  aqua_affinity:
+    cap: 1
   thorns:
-    cap: 10
-  impaling:
-    cap: 10
-  sweeping_edge:
-    cap: 8
-  piercing:
     cap: 10
   depth_strider:
     cap: 8
-  loyalty:
-    cap: 8
-  riptide:
+  frost_walker:
     cap: 6
-  lure:
-    cap: 8
-  luck_of_the_sea:
-    cap: 8
   soul_speed:
     cap: 6
   swift_sneak:
     cap: 6
+
+  # Fishing
+  lure:
+    cap: 8
+  luck_of_the_sea:
+    cap: 8
+
+  # Utility & Curses
+  silk_touch:
+    cap: 1
+  mending:
+    cap: 1
+  binding_curse:
+    cap: 1
+  vanishing_curse:
+    cap: 1

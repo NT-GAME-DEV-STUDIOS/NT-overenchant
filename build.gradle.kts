@@ -38,7 +38,7 @@ tasks.processResources {
 }
 
 tasks.jar {
-    archiveBaseName.set("OverEnchant")
+    archiveBaseName.set("NT-overenchant")
     archiveClassifier.set("")
     archiveVersion.set("1.0.4")
 }

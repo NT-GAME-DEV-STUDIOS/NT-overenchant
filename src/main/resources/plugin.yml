@@ -1,7 +1,8 @@
-name: OverEnchant
+name: NT-overenchant
 version: '${version}'
 main: dev.ntgame.overenchant.OverEnchantPlugin
 authors: [NT-GAME-DEV-STUDIOS]
+website: https://github.com/NT-GAME-DEV-STUDIOS/NT-overenchant
 description: Lets enchantments on an anvil be stacked past their vanilla max level, up to a configurable cap per enchantment.
 
 commands:
